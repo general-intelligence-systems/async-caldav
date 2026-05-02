@@ -1,0 +1,12 @@
+services:
+  caldav:
+    build:
+      context: ..
+      dockerfile: example/Dockerfile
+    ports:
+      - "9292:9292"
+    volumes:
+      - caldav-data:/data
+
+volumes:
+  caldav-data:
