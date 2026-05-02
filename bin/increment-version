@@ -1,7 +1,6 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-require "erb"
 require_relative "../lib/async/caldav/version"
 
 USAGE = <<~TEXT
@@ -32,13 +31,17 @@ end
 
 version = "#{major}.#{minor}.#{patch}"
 
-template_path = File.expand_path("../lib/async/caldav/version.rb.erb", __dir__)
-output_path   = File.expand_path("../lib/async/caldav/version.rb", __dir__)
+output_path = File.expand_path("../lib/async/caldav/version.rb", __dir__)
 
-template = ERB.new(File.read(template_path))
-result = template.result(binding)
+File.write(output_path, <<~RUBY)
+  # frozen_string_literal: true
 
-File.write(output_path, result)
+  module Async
+    module Caldav
+      VERSION = "#{version}"
+    end
+  end
+RUBY
 
 `bundle install`
 

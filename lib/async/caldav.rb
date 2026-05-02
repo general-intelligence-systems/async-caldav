@@ -16,6 +16,7 @@ require_relative 'caldav/handlers/propfind'
 require_relative 'caldav/handlers/proppatch'
 require_relative 'caldav/handlers/report'
 require_relative 'caldav/server'
+require_relative 'caldav/client'
 
 module Async
   module Caldav
