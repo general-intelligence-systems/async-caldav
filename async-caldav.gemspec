@@ -15,7 +15,7 @@ Gem::Specification.new do |spec|
     Built on protocol-caldav for wire-format concerns.
   DESC
 
-  spec.homepage = 'https://github.com/n-at-han-k/async-caldav'
+  spec.homepage = 'https://github.com/general-intelligence-systems/async-caldav'
   spec.license = 'Apache-2.0'
   spec.required_ruby_version = '>= 3.2.0'
 
