@@ -1,15 +1,8 @@
 PATH
-  remote: ../protocol-caldav
-  specs:
-    protocol-caldav (0.1.0)
-      rexml
-      scampi (~> 0.1.7)
-
-PATH
   remote: .
   specs:
-    async-caldav (1.0.0)
-      protocol-caldav (~> 0.1)
+    async-caldav (1.1.0)
+      protocol-caldav (~> 1.0)
       scampi (~> 0.1.7)
 
 GEM
@@ -18,6 +11,9 @@ GEM
     colorize (1.1.0)
     colorize-extended (0.1.0)
       colorize (~> 1.1)
+    protocol-caldav (1.0.0)
+      rexml
+      scampi (~> 0.1.7)
     rexml (3.4.4)
     scampi (0.1.7)
       colorize-extended
@@ -28,7 +24,7 @@ PLATFORMS
 
 DEPENDENCIES
   async-caldav!
-  protocol-caldav!
+  protocol-caldav (~> 1.0)
 
 BUNDLED WITH
    2.6.9

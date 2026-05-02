@@ -4,4 +4,4 @@ source "https://rubygems.org"
 
 gemspec name: "async-caldav"
 
-gem "protocol-caldav", path: "../protocol-caldav"
+gem "protocol-caldav", "~> 1.0"

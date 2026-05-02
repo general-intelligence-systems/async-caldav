@@ -24,6 +24,6 @@ Gem::Specification.new do |spec|
   spec.files = Dir.glob('lib/async/**/*').select { |f| File.file?(f) }
   spec.require_paths = ['lib']
 
-  spec.add_dependency 'protocol-caldav', '~> 0.1'
+  spec.add_dependency 'protocol-caldav', '~> 1.0'
   spec.add_dependency 'scampi', '~> 0.1.7'
 end
