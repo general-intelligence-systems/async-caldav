@@ -1,11 +1,11 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-require_relative "../lib/caldav/version"
+require_relative "../lib/async/caldav/version"
 
-local_version = Caldav::VERSION
-gem_name = "caldav"
-gemspec = "caldav.gemspec"
+local_version = Async::Caldav::VERSION
+gem_name = "async-caldav"
+gemspec = "async-caldav.gemspec"
 
 puts "Local version: #{local_version}"
 

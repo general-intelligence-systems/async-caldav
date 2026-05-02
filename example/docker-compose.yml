@@ -1,8 +1,8 @@
 services:
   caldav:
     build:
-      context: ..
-      dockerfile: example/Dockerfile
+      context: ../..
+      dockerfile: async-caldav/example/Dockerfile
     ports:
       - "9292:9292"
     volumes:

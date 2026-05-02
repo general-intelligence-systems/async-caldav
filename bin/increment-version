@@ -2,7 +2,7 @@
 # frozen_string_literal: true
 
 require "erb"
-require_relative "../lib/caldav/version"
+require_relative "../lib/async/caldav/version"
 
 USAGE = <<~TEXT
   Usage: bin/increment-version <major|minor|patch>
@@ -15,7 +15,7 @@ unless %w[major minor patch].include?(segment)
   exit 1
 end
 
-current = Caldav::VERSION
+current = Async::Caldav::VERSION
 major, minor, patch = current.split(".").map(&:to_i)
 
 case segment
@@ -32,8 +32,8 @@ end
 
 version = "#{major}.#{minor}.#{patch}"
 
-template_path = File.expand_path("../lib/caldav/version.rb.erb", __dir__)
-output_path   = File.expand_path("../lib/caldav/version.rb", __dir__)
+template_path = File.expand_path("../lib/async/caldav/version.rb.erb", __dir__)
+output_path   = File.expand_path("../lib/async/caldav/version.rb", __dir__)
 
 template = ERB.new(File.read(template_path))
 result = template.result(binding)
@@ -43,4 +43,3 @@ File.write(output_path, result)
 `bundle install`
 
 puts "#{current} -> #{version}"
-

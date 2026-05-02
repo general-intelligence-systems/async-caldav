@@ -15,12 +15,11 @@ Gem::Specification.new do |spec|
     Built on protocol-caldav for wire-format concerns.
   DESC
 
-  spec.homepage = 'https://github.com/n-at-han-k/caldav'
+  spec.homepage = 'https://github.com/n-at-han-k/async-caldav'
   spec.license = 'Apache-2.0'
   spec.required_ruby_version = '>= 3.2.0'
 
   spec.metadata['homepage_uri'] = spec.homepage
-  spec.metadata['rubygems_mfa_required'] = 'true'
 
   spec.files = Dir.glob('lib/async/**/*').select { |f| File.file?(f) }
   spec.require_paths = ['lib']
