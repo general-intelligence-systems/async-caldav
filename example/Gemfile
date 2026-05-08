@@ -3,7 +3,6 @@
 source "https://rubygems.org"
 
 gem "async-caldav", path: ".."
-gem "protocol-caldav", path: "../../protocol-caldav"
 gem "falcon", "~> 0.55"
 gem "rackup"
 gem "scampi"
