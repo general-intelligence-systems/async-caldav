@@ -6,9 +6,10 @@ COPY async-caldav.gemspec Gemfile ./
 COPY lib/ lib/
 
 COPY example/Gemfile example/Gemfile
-RUN cd example && bundle install --jobs 4
+RUN cd example && rm -f Gemfile.lock && bundle install --jobs 4
 
 COPY . .
+RUN cd example && bundle install --jobs 4
 
 EXPOSE 9292
 
