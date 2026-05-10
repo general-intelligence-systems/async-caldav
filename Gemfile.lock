@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    async-caldav (1.2.1)
+    async-caldav (1.2.2)
       protocol-caldav (~> 1.0)
       scampi (~> 0.1.7)
 
