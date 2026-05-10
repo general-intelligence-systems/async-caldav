@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    async-caldav (1.2.3)
+    async-caldav (1.2.4)
       protocol-caldav (~> 1.0)
       scampi (~> 0.1.7)
 
@@ -12,8 +12,11 @@ GEM
     colorize (1.1.0)
     colorize-extended (0.1.0)
       colorize (~> 1.1)
-    protocol-caldav (1.0.2)
+    protocol-caldav (1.0.3)
       builder
+      rexml
+      scampi (~> 0.1.7)
+    rexml (3.4.4)
     scampi (0.1.7)
       colorize-extended
 
