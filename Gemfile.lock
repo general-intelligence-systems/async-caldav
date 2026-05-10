@@ -14,8 +14,6 @@ GEM
       colorize (~> 1.1)
     protocol-caldav (1.0.2)
       builder
-      rexml
-      scampi (~> 0.1.7)
     rexml (3.4.4)
     scampi (0.1.7)
       colorize-extended
