@@ -2,6 +2,7 @@
 
 require "bundler/setup"
 require "scampi"
+require "builder"
 
 module Async
   module Caldav
@@ -16,22 +17,13 @@ module Async
         end
 
         def contacts(filter: nil)
-          body = if filter
-            <<~XML
-              <?xml version="1.0" encoding="UTF-8"?>
-              <cr:addressbook-query xmlns:d="DAV:" xmlns:cr="urn:ietf:params:xml:ns:carddav">
-                <d:prop><d:getetag/><cr:address-data/></d:prop>
-                #{filter}
-              </cr:addressbook-query>
-            XML
-          else
-            <<~XML
-              <?xml version="1.0" encoding="UTF-8"?>
-              <cr:addressbook-query xmlns:d="DAV:" xmlns:cr="urn:ietf:params:xml:ns:carddav">
-                <d:prop><d:getetag/><cr:address-data/></d:prop>
-              </cr:addressbook-query>
-            XML
+          x = Builder::XmlMarkup.new
+          x.instruct! :xml, version: "1.0", encoding: "UTF-8"
+          x.tag!("cr:addressbook-query", "xmlns:d" => "DAV:", "xmlns:cr" => "urn:ietf:params:xml:ns:carddav") do
+            x.tag!("d:prop") { x.tag!("d:getetag"); x.tag!("cr:address-data") }
+            x << filter if filter
           end
+          body = x.target!
 
           status, _, resp_body = @client.request('REPORT', @path, body: body, headers: { 'Content-Type' => 'text/xml' })
           raise Error, "REPORT failed: #{status}" unless status == 207
@@ -95,17 +87,17 @@ module Async
         end
 
         def proppatch(displayname: nil)
-          props = []
-          props << "<d:displayname>#{Protocol::Caldav::Xml.escape(displayname)}</d:displayname>" if displayname
+          x = Builder::XmlMarkup.new
+          x.instruct! :xml, version: "1.0", encoding: "UTF-8"
+          x.tag!("d:propertyupdate", "xmlns:d" => "DAV:") do
+            x.tag!("d:set") do
+              x.tag!("d:prop") do
+                x.tag!("d:displayname", displayname) if displayname
+              end
+            end
+          end
 
-          body = <<~XML
-            <?xml version="1.0" encoding="UTF-8"?>
-            <d:propertyupdate xmlns:d="DAV:">
-              <d:set><d:prop>#{props.join}</d:prop></d:set>
-            </d:propertyupdate>
-          XML
-
-          status, = @client.request('PROPPATCH', @path, body: body, headers: { 'Content-Type' => 'text/xml' })
+          status, = @client.request('PROPPATCH', @path, body: x.target!, headers: { 'Content-Type' => 'text/xml' })
           raise Error, "PROPPATCH failed: #{status}" unless status == 207
 
           @displayname = displayname if displayname

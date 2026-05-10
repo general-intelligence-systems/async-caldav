@@ -14,6 +14,8 @@ module Async
           @root = root
           @sync_snapshots = {}
           FileUtils.mkdir_p(@root)
+          @root_normalized = ::File.expand_path(@root)
+          @root_with_separator = @root_normalized.end_with?(::File::SEPARATOR) ? @root_normalized : "#{@root_normalized}#{::File::SEPARATOR}"
         end
 
         # --- Collections ---
@@ -39,9 +41,9 @@ module Async
         end
 
         def delete_collection(path)
-          dir = full_path(path)
-          if File.directory?(dir)
-            FileUtils.rm_rf(dir)
+          s = stat(path)
+          if s && s.directory?
+            FileUtils.rm_rf(full_path(path))
             true
           else
             false
@@ -89,13 +91,15 @@ module Async
         # --- Items ---
 
         def get_item(path)
-          file = full_path(path)
-          return nil unless File.file?(file)
-
-          body = File.read(file)
-          content_type = guess_content_type(path)
-          etag = Protocol::Caldav::ETag.compute(body)
-          { body: body, content_type: content_type, etag: etag }
+          s = stat(path)
+          if s && s.file?
+            body = File.read(full_path(path))
+            content_type = guess_content_type(path)
+            etag = Protocol::Caldav::ETag.compute(body)
+            { body: body, content_type: content_type, etag: etag }
+          else
+            nil
+          end
         end
 
         def put_item(path, body, content_type)
@@ -109,9 +113,9 @@ module Async
         end
 
         def delete_item(path)
-          file = full_path(path)
-          if File.file?(file)
-            File.delete(file)
+          s = stat(path)
+          if s && s.file?
+            File.delete(full_path(path))
             true
           else
             false
@@ -136,13 +140,15 @@ module Async
         end
 
         def move_item(from_path, to_path)
-          src = full_path(from_path)
-          dst = full_path(to_path)
-          return nil unless File.file?(src)
-
-          FileUtils.mkdir_p(File.dirname(dst))
-          FileUtils.mv(src, dst)
-          get_item(to_path)
+          s = stat(from_path)
+          if s && s.file?
+            dst = full_path(to_path)
+            FileUtils.mkdir_p(File.dirname(dst))
+            FileUtils.mv(full_path(from_path), dst)
+            get_item(to_path)
+          else
+            nil
+          end
         end
 
         def get_multi(paths)
@@ -152,8 +158,11 @@ module Async
         # --- General ---
 
         def exists?(path)
-          fp = full_path(path)
-          File.exist?(fp) || collection_exists?(path)
+          if stat(path)
+            true
+          else
+            collection_exists?(path)
+          end
         end
 
         def etag(path)
@@ -208,7 +217,26 @@ module Async
         private
 
         def full_path(path)
-          File.join(@root, path)
+          if valid_path?(path)
+            expanded = ::File.expand_path(::File.join(@root, path))
+            if expanded == @root_normalized || expanded.start_with?(@root_with_separator)
+              expanded
+            else
+              raise ArgumentError, "path escapes root: #{path.inspect}"
+            end
+          else
+            raise ArgumentError, "invalid path: #{path.inspect}"
+          end
+        end
+
+        def valid_path?(path)
+          path.is_a?(String) && path.valid_encoding? && !path.include?("\0")
+        end
+
+        def stat(path)
+          ::File.stat(full_path(path))
+        rescue Errno::ENOENT, Errno::ELOOP
+          nil
         end
 
         def guess_content_type(path)
@@ -358,6 +386,21 @@ test do
         s.put_item("/addr/c.vcf", "card", "text/vcard")
         s.get_item("/cal/ev.ics")[:content_type].should.equal "text/calendar"
         s.get_item("/addr/c.vcf")[:content_type].should.equal "text/vcard"
+      end
+    end
+
+    it "rejects path traversal attempts" do
+      Dir.mktmpdir do |dir|
+        s = Async::Caldav::Storage::Filesystem.new(dir)
+        lambda { s.get_item("/../../etc/passwd") }.should.raise ArgumentError
+        lambda { s.put_item("/cal/../../escape.ics", "x", "text/calendar") }.should.raise ArgumentError
+      end
+    end
+
+    it "rejects NUL byte in path" do
+      Dir.mktmpdir do |dir|
+        s = Async::Caldav::Storage::Filesystem.new(dir)
+        lambda { s.get_item("/cal\0/x.ics") }.should.raise ArgumentError
       end
     end
 

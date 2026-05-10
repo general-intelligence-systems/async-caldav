@@ -13,6 +13,7 @@ module Async
         def call(path:, storage:, user:, headers: {}, body: nil, **)
           depth = headers['depth'] || '1'
           propname = body&.include?('propname')
+          build = propname ? :build_propname : :build_propfind
 
           col_path = path.ensure_trailing_slash
           collection = storage.get_collection(col_path.to_s)
@@ -23,97 +24,86 @@ module Async
             return [404, { 'content-type' => 'text/plain' }, ['Not Found']]
           end
 
-          responses = []
+          xml = Protocol::Caldav::Multistatus.new.to_xml do |x|
+            if collection
+              col = Protocol::Caldav::Collection.new(
+                path: col_path,
+                type: collection[:type],
+                displayname: collection[:displayname],
+                description: collection[:description],
+                color: collection[:color],
+                props: collection[:props]
+              )
+              col.send(build, x)
 
-          if collection
-            col = Protocol::Caldav::Collection.new(
-              path: col_path,
-              type: collection[:type],
-              displayname: collection[:displayname],
-              description: collection[:description],
-              color: collection[:color],
-              props: collection[:props]
-            )
-            responses << (propname ? col.to_propname_xml : col.to_propfind_xml)
+              if depth != '0'
+                storage.list_collections(col_path.to_s).each do |child_path, child_data|
+                  child_p = Protocol::Caldav::Path.new(child_path, storage_class: storage)
+                  child_col = Protocol::Caldav::Collection.new(
+                    path: child_p,
+                    type: child_data[:type],
+                    displayname: child_data[:displayname],
+                    description: child_data[:description],
+                    color: child_data[:color],
+                    props: child_data[:props]
+                  )
+                  child_col.send(build, x)
+                end
 
-            if depth != '0'
-              # Child collections
-              storage.list_collections(col_path.to_s).each do |child_path, child_data|
-                child_p = Protocol::Caldav::Path.new(child_path, storage_class: storage)
-                child_col = Protocol::Caldav::Collection.new(
-                  path: child_p,
-                  type: child_data[:type],
-                  displayname: child_data[:displayname],
-                  description: child_data[:description],
-                  color: child_data[:color],
-                  props: child_data[:props]
-                )
-                responses << (propname ? child_col.to_propname_xml : child_col.to_propfind_xml)
+                storage.list_items(col_path.to_s).each do |item_path, data|
+                  item_p = Protocol::Caldav::Path.new(item_path, storage_class: storage)
+                  item = Protocol::Caldav::Item.new(
+                    path: item_p,
+                    body: data[:body],
+                    content_type: data[:content_type],
+                    etag: data[:etag]
+                  )
+                  item.send(build, x)
+                end
               end
+            elsif item_data
+              item = Protocol::Caldav::Item.new(
+                path: path,
+                body: item_data[:body],
+                content_type: item_data[:content_type],
+                etag: item_data[:etag]
+              )
+              item.send(build, x)
+            else
+              build_discovery(x, path, user)
 
-              # Child items
-              storage.list_items(col_path.to_s).each do |item_path, data|
-                item_p = Protocol::Caldav::Path.new(item_path, storage_class: storage)
-                item = Protocol::Caldav::Item.new(
-                  path: item_p,
-                  body: data[:body],
-                  content_type: data[:content_type],
-                  etag: data[:etag]
-                )
-                responses << (propname ? item.to_propname_xml : item.to_propfind_xml)
-              end
-            end
-          elsif item_data
-            item = Protocol::Caldav::Item.new(
-              path: path,
-              body: item_data[:body],
-              content_type: item_data[:content_type],
-              etag: item_data[:etag]
-            )
-            responses << (propname ? item.to_propname_xml : item.to_propfind_xml)
-          else
-            # Shallow path with no collection — return basic discovery info
-            responses << build_discovery_xml(path, user)
-
-            # Still list child collections/items for depth=1
-            if depth != '0'
-              storage.list_collections(col_path.to_s).each do |child_path, child_data|
-                child_p = Protocol::Caldav::Path.new(child_path, storage_class: storage)
-                child_col = Protocol::Caldav::Collection.new(
-                  path: child_p,
-                  type: child_data[:type],
-                  displayname: child_data[:displayname],
-                  description: child_data[:description],
-                  color: child_data[:color],
-                  props: child_data[:props]
-                )
-                responses << (propname ? child_col.to_propname_xml : child_col.to_propfind_xml)
+              if depth != '0'
+                storage.list_collections(col_path.to_s).each do |child_path, child_data|
+                  child_p = Protocol::Caldav::Path.new(child_path, storage_class: storage)
+                  child_col = Protocol::Caldav::Collection.new(
+                    path: child_p,
+                    type: child_data[:type],
+                    displayname: child_data[:displayname],
+                    description: child_data[:description],
+                    color: child_data[:color],
+                    props: child_data[:props]
+                  )
+                  child_col.send(build, x)
+                end
               end
             end
           end
 
-          xml = Protocol::Caldav::Multistatus.new(responses).to_xml
           [207, Protocol::Caldav::Constants::DAV_HEADERS, [xml]]
         end
 
-        def build_discovery_xml(path, user)
-          <<~XML
-            <d:response>
-              <d:href>#{Protocol::Caldav::Xml.escape(path.to_s)}</d:href>
-              <d:propstat>
-                <d:prop>
-                  <d:resourcetype><d:collection/></d:resourcetype>
-                  <d:current-user-principal><d:href>/#{user}/</d:href></d:current-user-principal>
-                  <c:calendar-home-set><d:href>/calendars/#{user}/</d:href></c:calendar-home-set>
-                  <cr:addressbook-home-set><d:href>/addressbooks/#{user}/</d:href></cr:addressbook-home-set>
-                </d:prop>
-                <d:status>HTTP/1.1 200 OK</d:status>
-              </d:propstat>
-            </d:response>
-          XML
+        def build_discovery(xml, path, user)
+          Protocol::Caldav::XmlBuilder.response(xml, href: path.to_s) do
+            Protocol::Caldav::XmlBuilder.propstat_ok(xml) do
+              xml.tag!("d:resourcetype") { xml.tag!("d:collection") }
+              xml.tag!("d:current-user-principal") { xml.tag!("d:href", "/#{user}/") }
+              xml.tag!("c:calendar-home-set") { xml.tag!("d:href", "/calendars/#{user}/") }
+              xml.tag!("cr:addressbook-home-set") { xml.tag!("d:href", "/addressbooks/#{user}/") }
+            end
+          end
         end
 
-        private_class_method :build_discovery_xml
+        private_class_method :build_discovery
       end
     end
   end

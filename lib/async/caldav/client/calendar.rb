@@ -2,6 +2,7 @@
 
 require "bundler/setup"
 require "scampi"
+require "builder"
 
 module Async
   module Caldav
@@ -19,22 +20,13 @@ module Async
         end
 
         def events(filter: nil)
-          body = if filter
-            <<~XML
-              <?xml version="1.0" encoding="UTF-8"?>
-              <c:calendar-query xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
-                <d:prop><d:getetag/><c:calendar-data/></d:prop>
-                #{filter}
-              </c:calendar-query>
-            XML
-          else
-            <<~XML
-              <?xml version="1.0" encoding="UTF-8"?>
-              <c:calendar-query xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
-                <d:prop><d:getetag/><c:calendar-data/></d:prop>
-              </c:calendar-query>
-            XML
+          x = Builder::XmlMarkup.new
+          x.instruct! :xml, version: "1.0", encoding: "UTF-8"
+          x.tag!("c:calendar-query", "xmlns:d" => "DAV:", "xmlns:c" => "urn:ietf:params:xml:ns:caldav") do
+            x.tag!("d:prop") { x.tag!("d:getetag"); x.tag!("c:calendar-data") }
+            x << filter if filter
           end
+          body = x.target!
 
           status, _, resp_body = @client.request('REPORT', @path, body: body, headers: { 'Content-Type' => 'text/xml' })
           raise Error, "REPORT failed: #{status}" unless status == 207
@@ -104,19 +96,19 @@ module Async
         end
 
         def proppatch(displayname: nil, description: nil, color: nil)
-          props = []
-          props << "<d:displayname>#{Protocol::Caldav::Xml.escape(displayname)}</d:displayname>" if displayname
-          props << "<c:calendar-description>#{Protocol::Caldav::Xml.escape(description)}</c:calendar-description>" if description
-          props << "<x:calendar-color>#{Protocol::Caldav::Xml.escape(color)}</x:calendar-color>" if color
+          x = Builder::XmlMarkup.new
+          x.instruct! :xml, version: "1.0", encoding: "UTF-8"
+          x.tag!("d:propertyupdate", "xmlns:d" => "DAV:", "xmlns:c" => "urn:ietf:params:xml:ns:caldav", "xmlns:x" => "http://apple.com/ns/ical/") do
+            x.tag!("d:set") do
+              x.tag!("d:prop") do
+                x.tag!("d:displayname", displayname) if displayname
+                x.tag!("c:calendar-description", description) if description
+                x.tag!("x:calendar-color", color) if color
+              end
+            end
+          end
 
-          body = <<~XML
-            <?xml version="1.0" encoding="UTF-8"?>
-            <d:propertyupdate xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav" xmlns:x="http://apple.com/ns/ical/">
-              <d:set><d:prop>#{props.join}</d:prop></d:set>
-            </d:propertyupdate>
-          XML
-
-          status, = @client.request('PROPPATCH', @path, body: body, headers: { 'Content-Type' => 'text/xml' })
+          status, = @client.request('PROPPATCH', @path, body: x.target!, headers: { 'Content-Type' => 'text/xml' })
           raise Error, "PROPPATCH failed: #{status}" unless status == 207
 
           @displayname = displayname if displayname
@@ -126,14 +118,17 @@ module Async
         end
 
         def sync(token: nil)
-          token_xml = token ? "<d:sync-token>#{token}</d:sync-token>" : "<d:sync-token/>"
-          body = <<~XML
-            <?xml version="1.0" encoding="UTF-8"?>
-            <d:sync-collection xmlns:d="DAV:">
-              <d:prop><d:getetag/></d:prop>
-              #{token_xml}
-            </d:sync-collection>
-          XML
+          x = Builder::XmlMarkup.new
+          x.instruct! :xml, version: "1.0", encoding: "UTF-8"
+          x.tag!("d:sync-collection", "xmlns:d" => "DAV:") do
+            x.tag!("d:prop") { x.tag!("d:getetag") }
+            if token
+              x.tag!("d:sync-token", token)
+            else
+              x.tag!("d:sync-token")
+            end
+          end
+          body = x.target!
 
           status, _, resp_body = @client.request('REPORT', @path, body: body, headers: { 'Content-Type' => 'text/xml' })
 

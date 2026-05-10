@@ -82,18 +82,18 @@ module Async
 
       def create_calendar(name, displayname: nil, description: nil, color: nil)
         path = "/calendars/#{@user}/#{name}/"
-        props = []
-        props << "<d:displayname>#{Protocol::Caldav::Xml.escape(displayname || name)}</d:displayname>" if displayname || name
-        props << "<c:calendar-description>#{Protocol::Caldav::Xml.escape(description)}</c:calendar-description>" if description
+        x = Builder::XmlMarkup.new
+        x.instruct! :xml, version: "1.0", encoding: "UTF-8"
+        x.tag!("c:mkcalendar", "xmlns:d" => "DAV:", "xmlns:c" => "urn:ietf:params:xml:ns:caldav") do
+          x.tag!("d:set") do
+            x.tag!("d:prop") do
+              x.tag!("d:displayname", displayname || name) if displayname || name
+              x.tag!("c:calendar-description", description) if description
+            end
+          end
+        end
 
-        body = <<~XML
-          <?xml version="1.0" encoding="UTF-8"?>
-          <c:mkcalendar xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
-            <d:set><d:prop>#{props.join}</d:prop></d:set>
-          </c:mkcalendar>
-        XML
-
-        status, = request('MKCALENDAR', path, body: body, headers: { 'Content-Type' => 'text/xml' })
+        status, = request('MKCALENDAR', path, body: x.target!, headers: { 'Content-Type' => 'text/xml' })
         raise Error, "MKCALENDAR failed: #{status}" unless status == 201
 
         Calendar.new(self, path, displayname: displayname || name, description: description, color: color)
@@ -101,17 +101,18 @@ module Async
 
       def create_addressbook(name, displayname: nil)
         path = "/addressbooks/#{@user}/#{name}/"
-        body = <<~XML
-          <?xml version="1.0" encoding="UTF-8"?>
-          <d:mkcol xmlns:d="DAV:" xmlns:cr="urn:ietf:params:xml:ns:carddav">
-            <d:set><d:prop>
-              <d:resourcetype><d:collection/><cr:addressbook/></d:resourcetype>
-              <d:displayname>#{Protocol::Caldav::Xml.escape(displayname || name)}</d:displayname>
-            </d:prop></d:set>
-          </d:mkcol>
-        XML
+        x = Builder::XmlMarkup.new
+        x.instruct! :xml, version: "1.0", encoding: "UTF-8"
+        x.tag!("d:mkcol", "xmlns:d" => "DAV:", "xmlns:cr" => "urn:ietf:params:xml:ns:carddav") do
+          x.tag!("d:set") do
+            x.tag!("d:prop") do
+              x.tag!("d:resourcetype") { x.tag!("d:collection"); x.tag!("cr:addressbook") }
+              x.tag!("d:displayname", displayname || name)
+            end
+          end
+        end
 
-        status, = request('MKCOL', path, body: body, headers: { 'Content-Type' => 'text/xml' })
+        status, = request('MKCOL', path, body: x.target!, headers: { 'Content-Type' => 'text/xml' })
         raise Error, "MKCOL failed: #{status}" unless status == 201
 
         Addressbook.new(self, path, displayname: displayname || name)

@@ -37,17 +37,14 @@ module Async
 
           storage.update_collection(col_path.to_s, updates)
 
-          response_xml = <<~XML
-            <d:response>
-              <d:href>#{Protocol::Caldav::Xml.escape(col_path.to_s)}</d:href>
-              <d:propstat>
-                <d:prop/>
-                <d:status>HTTP/1.1 200 OK</d:status>
-              </d:propstat>
-            </d:response>
-          XML
-
-          xml = Protocol::Caldav::Multistatus.new([response_xml]).to_xml
+          xml = Protocol::Caldav::Multistatus.new.to_xml do |x|
+            Protocol::Caldav::XmlBuilder.response(x, href: col_path.to_s) do
+              x.tag!("d:propstat") do
+                x.tag!("d:prop")
+                x.tag!("d:status", "HTTP/1.1 200 OK")
+              end
+            end
+          end
           [207, Protocol::Caldav::Constants::DAV_HEADERS, [xml]]
         end
       end

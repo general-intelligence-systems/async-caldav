@@ -43,45 +43,46 @@ module Async
             items = multi.select { |_, data| data }
           end
 
-          responses = items.filter_map do |item_path, data|
-            next unless data
+          xml = Protocol::Caldav::Multistatus.new.to_xml do |x|
+            items.each do |item_path, data|
+              next unless data
 
-            # Apply filter
-            if filter
-              if resource_type == :addressbook
-                card = Protocol::Caldav::Vcard::Parser.parse(data[:body])
-                next unless card && Protocol::Caldav::Filter::Match.addressbook?(filter, card)
-              else
-                component = Protocol::Caldav::Ical::Parser.parse(data[:body])
-                next unless component && Protocol::Caldav::Filter::Match.calendar?(filter, component)
+              # Apply filter
+              if filter
+                if resource_type == :addressbook
+                  card = Protocol::Caldav::Vcard::Parser.parse(data[:body])
+                  next unless card && Protocol::Caldav::Filter::Match.addressbook?(filter, card)
+                else
+                  component = Protocol::Caldav::Ical::Parser.parse(data[:body])
+                  next unless component && Protocol::Caldav::Filter::Match.calendar?(filter, component)
+                end
               end
-            end
 
-            item_body = data[:body]
+              item_body = data[:body]
 
-            # Apply expand if requested (calendar items only)
-            if expand_range && resource_type != :addressbook
-              component = Protocol::Caldav::Ical::Parser.parse(item_body)
-              if component
-                item_body = Protocol::Caldav::Ical::Expand.expand(
-                  component,
-                  range_start: expand_range[:start],
-                  range_end: expand_range[:end]
-                )
+              # Apply expand if requested (calendar items only)
+              if expand_range && resource_type != :addressbook
+                component = Protocol::Caldav::Ical::Parser.parse(item_body)
+                if component
+                  item_body = Protocol::Caldav::Ical::Expand.expand(
+                    component,
+                    range_start: expand_range[:start],
+                    range_end: expand_range[:end]
+                  )
+                end
               end
-            end
 
-            item_p = Protocol::Caldav::Path.new(item_path, storage_class: storage)
-            item = Protocol::Caldav::Item.new(
-              path: item_p,
-              body: item_body,
-              content_type: data[:content_type],
-              etag: data[:etag]
-            )
-            item.to_report_xml(data_tag: data_tag)
+              item_p = Protocol::Caldav::Path.new(item_path, storage_class: storage)
+              item = Protocol::Caldav::Item.new(
+                path: item_p,
+                body: item_body,
+                content_type: data[:content_type],
+                etag: data[:etag]
+              )
+              item.build_report(x, data_tag: data_tag)
+            end
           end
 
-          xml = Protocol::Caldav::Multistatus.new(responses).to_xml
           [207, Protocol::Caldav::Constants::DAV_HEADERS, [xml]]
         end
 
@@ -97,66 +98,47 @@ module Async
             # Incremental sync
             result = storage.sync_changes(col_path, old_token)
             unless result
-              # Invalid token
-              error_xml = <<~XML
-                <?xml version="1.0" encoding="UTF-8"?>
-                <d:error xmlns:d="DAV:">
-                  <d:valid-sync-token/>
-                </d:error>
-              XML
-              return [403, { 'content-type' => 'application/xml' }, [error_xml]]
+              error_xml = Builder::XmlMarkup.new
+              error_xml.instruct! :xml, version: "1.0", encoding: "UTF-8"
+              error_xml.tag!("d:error", "xmlns:d" => "DAV:") do
+                error_xml.tag!("d:valid-sync-token")
+              end
+              return [403, { 'content-type' => 'application/xml' }, [error_xml.target!]]
             end
 
             new_token, changes = result
-            responses = changes.map do |item_path, status|
-              if status == :deleted
-                <<~XML
-                  <d:response>
-                    <d:href>#{Protocol::Caldav::Xml.escape(item_path)}</d:href>
-                    <d:status>HTTP/1.1 404 Not Found</d:status>
-                  </d:response>
-                XML
-              else
-                etag = storage.etag(item_path)
-                <<~XML
-                  <d:response>
-                    <d:href>#{Protocol::Caldav::Xml.escape(item_path)}</d:href>
-                    <d:propstat>
-                      <d:prop>
-                        <d:getetag>#{Protocol::Caldav::Xml.escape(etag)}</d:getetag>
-                      </d:prop>
-                      <d:status>HTTP/1.1 200 OK</d:status>
-                    </d:propstat>
-                  </d:response>
-                XML
+            xml = Protocol::Caldav::XmlBuilder.multistatus do |x|
+              changes.each do |item_path, status|
+                if status == :deleted
+                  Protocol::Caldav::XmlBuilder.response(x, href: item_path) do
+                    x.tag!("d:status", "HTTP/1.1 404 Not Found")
+                  end
+                else
+                  etag = storage.etag(item_path)
+                  Protocol::Caldav::XmlBuilder.response(x, href: item_path) do
+                    Protocol::Caldav::XmlBuilder.propstat_ok(x) do
+                      x.tag!("d:getetag", etag)
+                    end
+                  end
+                end
               end
+              x.tag!("d:sync-token", new_token)
             end
           else
             # Initial sync — return all items
             new_token = storage.snapshot_sync(col_path)
             items = storage.list_items(col_path)
-            responses = items.map do |item_path, data|
-              <<~XML
-                <d:response>
-                  <d:href>#{Protocol::Caldav::Xml.escape(item_path)}</d:href>
-                  <d:propstat>
-                    <d:prop>
-                      <d:getetag>#{Protocol::Caldav::Xml.escape(data[:etag])}</d:getetag>
-                    </d:prop>
-                    <d:status>HTTP/1.1 200 OK</d:status>
-                  </d:propstat>
-                </d:response>
-              XML
+            xml = Protocol::Caldav::XmlBuilder.multistatus do |x|
+              items.each do |item_path, data|
+                Protocol::Caldav::XmlBuilder.response(x, href: item_path) do
+                  Protocol::Caldav::XmlBuilder.propstat_ok(x) do
+                    x.tag!("d:getetag", data[:etag])
+                  end
+                end
+              end
+              x.tag!("d:sync-token", new_token)
             end
           end
-
-          xml = <<~XML
-            <?xml version="1.0" encoding="UTF-8"?>
-            <d:multistatus xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav" xmlns:cr="urn:ietf:params:xml:ns:carddav" xmlns:cs="http://calendarserver.org/ns/" xmlns:x="http://apple.com/ns/ical/">
-            #{responses.join}
-            <d:sync-token>#{Protocol::Caldav::Xml.escape(new_token)}</d:sync-token>
-            </d:multistatus>
-          XML
 
           [207, Protocol::Caldav::Constants::DAV_HEADERS, [xml]]
         end
