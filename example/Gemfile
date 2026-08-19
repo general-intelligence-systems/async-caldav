@@ -2,7 +2,11 @@
 
 source "https://rubygems.org"
 
-gem "async-caldav", path: ".."
-gem "falcon", "~> 0.55"
-gem "rackup"
-gem "scampi"
+gem "async-caldav", "~> 1.2"
+gem "ratalada", "~> 1.0"
+gem "falcon", "~> 0.55.5"
+
+# ratalada 1.0 builds its falcon environment against async-service 0.24; 0.25
+# added a `root` lookup the environment does not answer, and falcon 0.57 turns
+# that into a hard failure at startup.
+gem "async-service", "~> 0.24.1"

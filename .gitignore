@@ -9,3 +9,6 @@
 /vendor/bundle
 refs
 .claude
+
+.direnv
+.gem

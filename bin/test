@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-COMPOSE_DIR="$ROOT_DIR/example"
+EXAMPLE_DIR="$ROOT_DIR/example"
 
 # --- Unit tests ---
 echo "=== Unit tests ==="
@@ -11,16 +11,36 @@ bundle exec scampi
 echo ""
 
 # --- Integration tests ---
-echo "=== Integration tests (docker) ==="
+echo "=== Integration tests ==="
+
+DATA_DIR="$(mktemp -d)"
+SERVER_PID=""
 
 cleanup() {
-  echo ""
-  echo "Shutting down docker compose..."
-  docker compose -f "$COMPOSE_DIR/docker-compose.yml" down --timeout 5 2>/dev/null || true
+  if [ -n "$SERVER_PID" ]; then
+    echo ""
+    echo "Shutting down server..."
+    kill "$SERVER_PID" 2>/dev/null || true
+    wait "$SERVER_PID" 2>/dev/null || true
+  fi
+  rm -rf "$DATA_DIR"
 }
 trap cleanup EXIT
 
-docker compose -f "$COMPOSE_DIR/docker-compose.yml" up -d ${1:-} 2>&1
+# The example depends on the published async-caldav, like any other user of
+# the gem. -I puts this working tree ahead of it so the integration suite
+# exercises the code you are editing, not the release.
+# Its own BUNDLE_PATH: the example installs the released async-caldav, and a
+# shared gem dir would overwrite the path-source stub this repo's own bundle
+# resolves `gemspec` to.
+(
+  cd "$EXAMPLE_DIR"
+  export BUNDLE_PATH="$EXAMPLE_DIR/.gem"
+  bundle install --quiet
+  CALDAV_DATA_DIR="$DATA_DIR" HOST=127.0.0.1 PORT=9292 \
+    RUBYOPT="-I$ROOT_DIR/lib" exec bundle exec ruby server.rb
+) &
+SERVER_PID=$!
 
 # Wait for server to be ready (OPTIONS / doesn't require auth)
 echo "Waiting for server..."
@@ -29,9 +49,12 @@ for i in $(seq 1 30); do
     echo "Server ready."
     break
   fi
+  if ! kill -0 "$SERVER_PID" 2>/dev/null; then
+    echo "Server exited before becoming ready"
+    exit 1
+  fi
   if [ "$i" -eq 30 ]; then
     echo "Server failed to start within 30s"
-    docker compose -f "$COMPOSE_DIR/docker-compose.yml" logs
     exit 1
   fi
   sleep 1

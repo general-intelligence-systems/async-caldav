@@ -1,0 +1,106 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    async (2.44.1)
+      console (~> 1.29)
+      fiber-annotation
+      io-event (~> 1.11)
+    async-caldav (1.2.4)
+      protocol-caldav (~> 1.0)
+      scampi (~> 0.1.7)
+    async-container (0.38.0)
+      async (~> 2.44)
+    async-http (0.100.0)
+      async (>= 2.35.1)
+      async-pool (~> 0.11)
+      io-endpoint (~> 0.18)
+      io-stream (~> 0.14)
+      protocol-http (~> 0.66)
+      protocol-http1 (~> 0.39)
+      protocol-http2 (~> 0.26)
+      protocol-url (~> 0.2)
+    async-http-cache (0.4.6)
+      async-http (~> 0.56)
+    async-pool (0.11.2)
+      async (>= 2.0)
+    async-service (0.24.1)
+      async
+      async-container (~> 0.34)
+      string-format (~> 0.2)
+    async-utilization (0.4.0)
+      console (~> 1.0)
+    bake (0.25.0)
+      bigdecimal
+      samovar (~> 2.1)
+    bigdecimal (4.1.2)
+    builder (3.3.0)
+    colorize (1.1.0)
+    colorize-extended (0.1.0)
+      colorize (~> 1.1)
+    console (1.37.0)
+      fiber-annotation
+      fiber-local (~> 1.1)
+      json
+    falcon (0.55.6)
+      async
+      async-container (~> 0.20)
+      async-http (~> 0.75)
+      async-http-cache (~> 0.4)
+      async-service (~> 0.19)
+      async-utilization (~> 0.3)
+      bundler
+      localhost (~> 1.1)
+      openssl (>= 3.0)
+      protocol-http (~> 0.31)
+      protocol-rack (~> 0.7)
+      samovar (~> 2.3)
+    fiber-annotation (0.2.0)
+    fiber-local (1.1.0)
+      fiber-storage
+    fiber-storage (1.0.1)
+    io-endpoint (0.18.0)
+      openssl (>= 3.3.0)
+    io-event (1.19.5)
+    io-stream (0.14.0)
+      openssl (>= 3.3)
+    json (2.21.2)
+    localhost (1.8.0)
+      bake
+    openssl (4.0.2)
+    protocol-caldav (1.0.3)
+      builder
+      rexml
+      scampi (~> 0.1.7)
+    protocol-hpack (1.5.1)
+    protocol-http (0.71.0)
+    protocol-http1 (0.40.2)
+      protocol-http (~> 0.68)
+    protocol-http2 (0.26.2)
+      protocol-hpack (~> 1.4)
+      protocol-http (~> 0.62)
+    protocol-rack (0.22.1)
+      io-stream (>= 0.10)
+      protocol-http (~> 0.58)
+      rack (>= 1.0)
+    protocol-url (0.18.0)
+    rack (3.2.7)
+    ratalada (1.0.0)
+    rexml (3.4.4)
+    samovar (2.5.1)
+      console (~> 1.0)
+    scampi (0.1.7)
+      colorize-extended
+    string-format (0.2.0)
+
+PLATFORMS
+  ruby
+  x86_64-linux
+
+DEPENDENCIES
+  async-caldav (~> 1.2)
+  async-service (~> 0.24.1)
+  falcon (~> 0.55.5)
+  ratalada (~> 1.0)
+
+BUNDLED WITH
+   2.6.9

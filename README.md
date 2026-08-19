@@ -13,23 +13,32 @@ gem "async-caldav", "~> 0.1"
 ## Quick start
 
 ```ruby
-# config.ru
+# server.rb
+require "ratalada/falcon"
 require "async/caldav"
 
-class ForwardAuthMiddleware
-  def initialize(app) = @app = app
-  def call(env)
-    env['dav.user'] = env['HTTP_REMOTE_USER']
-    @app.call(env)
-  end
-end
-
 storage = Async::Caldav::Storage::Filesystem.new("/data")
-use ForwardAuthMiddleware
-run Async::Caldav::Server.new(storage: storage)
+caldav = Async::Caldav::Server.new(storage: storage)
+
+Server.run do |request|
+  request.env['dav.user'] = request.env['HTTP_REMOTE_USER']
+  ->(req) { caldav.call(req.env) }
+end
 ```
 
-See `example/` for a complete Docker Compose setup with Falcon.
+That is the whole server -- `ruby server.rb` listens on `http://127.0.0.1:9292`
+([ratalada](https://github.com/n-at-han-k/ratalada) supplies the `Server` DSL
+and the falcon backend). It is still a plain Rack app, so a `config.ru` under
+any other server works just as well.
+
+`example/` is that server as a runnable file, with a flake around it:
+
+```
+cd example
+nix run          # or: bundle install && bundle exec ruby server.rb
+```
+
+Data lands in `$CALDAV_DATA_DIR` (default `./data`).
 
 ## Client
 
@@ -115,14 +124,14 @@ bundle install
 bundle exec scampi
 ```
 
-Integration tests (requires Docker):
+Integration tests -- starts `example/server.rb`, hits it with curl, shuts it down:
 ```
 bin/test
 ```
 
-Or manually:
+Or against a server you started yourself:
 ```
-cd example && docker compose up -d
+cd example && bundle exec ruby server.rb
 bin/integration
 ```
 
