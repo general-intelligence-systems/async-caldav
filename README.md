@@ -125,10 +125,26 @@ The server reads `env['dav.user']`. Wire this up however you like -- the `Forwar
 
 ## Tests
 
-Unit tests:
+Specs live in each file's `__END__` section, so they never load in production
+(Ruby stops parsing at `__END__`) and sit next to the code they cover. `scampi`
+finds them with `rg` and runs them:
+
 ```
-bundle install
-bundle exec scampi
+nix develop
+scampi                              # every __END__ spec section
+scampi lib/async/caldav/server.rb   # just one file
+```
+
+Style is enforced by RuboCop, using the house cops under `cops/`:
+
+```
+rubocop
+```
+
+Git hooks (secret scan + `bin/test` on pre-commit) are managed by lefthook:
+
+```
+nix develop --command lefthook install
 ```
 
 Integration tests -- starts `examples/ratalada/server.rb`, hits it with curl, shuts it down:

@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "bundler/setup"
-require "scampi"
 require "builder"
 
 module Async
@@ -21,20 +19,28 @@ module Async
           x.instruct! :xml, version: "1.0", encoding: "UTF-8"
           x.tag!("cr:addressbook-query", "xmlns:d" => "DAV:", "xmlns:cr" => "urn:ietf:params:xml:ns:carddav") do
             x.tag!("d:prop") { x.tag!("d:getetag"); x.tag!("cr:address-data") }
-            x << filter if filter
+            if filter
+              x << filter
+            end
           end
           body = x.target!
 
           status, _, resp_body = @client.request('REPORT', @path, body: body, headers: { 'Content-Type' => 'text/xml' })
-          raise Error, "REPORT failed: #{status}" unless status == 207
+          unless status == 207
+            raise Error, "REPORT failed: #{status}"
+          end
 
           @client.parse_multistatus_items(resp_body, data_tag: 'address-data')
         end
 
         def put_contact(filename, body, if_match: nil, if_none_match: nil)
           headers = { 'Content-Type' => 'text/vcard' }
-          headers['If-Match'] = if_match if if_match
-          headers['If-None-Match'] = if_none_match if if_none_match
+          if if_match
+            headers['If-Match'] = if_match
+          end
+          if if_none_match
+            headers['If-None-Match'] = if_none_match
+          end
 
           path = "#{@path}#{filename}"
           status, resp_headers, = @client.request('PUT', path, body: body, headers: headers)
@@ -92,15 +98,21 @@ module Async
           x.tag!("d:propertyupdate", "xmlns:d" => "DAV:") do
             x.tag!("d:set") do
               x.tag!("d:prop") do
-                x.tag!("d:displayname", displayname) if displayname
+                if displayname
+                  x.tag!("d:displayname", displayname)
+                end
               end
             end
           end
 
           status, = @client.request('PROPPATCH', @path, body: x.target!, headers: { 'Content-Type' => 'text/xml' })
-          raise Error, "PROPPATCH failed: #{status}" unless status == 207
+          unless status == 207
+            raise Error, "PROPPATCH failed: #{status}"
+          end
 
-          @displayname = displayname if displayname
+          if displayname
+            @displayname = displayname
+          end
           self
         end
       end

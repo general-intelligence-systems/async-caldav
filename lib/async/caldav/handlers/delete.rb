@@ -1,9 +1,5 @@
 # frozen_string_literal: true
 
-require "bundler/setup"
-require "scampi"
-require "async/caldav"
-
 module Async
   module Caldav
     module Handlers
@@ -28,33 +24,35 @@ module Async
   end
 end
 
-test do
-  describe "Async::Caldav::Handlers::Delete" do
-    def call(**opts)
-      Async::Caldav::Handlers::Delete.call(**opts)
-    end
+__END__
 
-    it "deletes an item and returns 204" do
-      s = Async::Caldav::Storage::Mock.new
-      s.create_collection('/calendars/admin/cal/', type: :calendar)
-      s.put_item('/calendars/admin/cal/event.ics', 'data', 'text/calendar')
-      status, = call(path: Protocol::Caldav::Path.new('/calendars/admin/cal/event.ics', storage_class: s), storage: s)
-      status.should.equal 204
-      s.get_item('/calendars/admin/cal/event.ics').should.be.nil
-    end
+require_relative "../../caldav"
 
-    it "deletes a collection and returns 204" do
-      s = Async::Caldav::Storage::Mock.new
-      s.create_collection('/calendars/admin/cal/', type: :calendar)
-      status, = call(path: Protocol::Caldav::Path.new('/calendars/admin/cal/', storage_class: s), storage: s)
-      status.should.equal 204
-      s.collection_exists?('/calendars/admin/cal/').should.equal false
-    end
+describe "Async::Caldav::Handlers::Delete" do
+  def call(**opts)
+    Async::Caldav::Handlers::Delete.call(**opts)
+  end
 
-    it "returns 404 for non-existent resource" do
-      s = Async::Caldav::Storage::Mock.new
-      status, = call(path: Protocol::Caldav::Path.new('/calendars/admin/nope/', storage_class: s), storage: s)
-      status.should.equal 404
-    end
+  it "deletes an item and returns 204" do
+    s = Async::Caldav::Storage::Mock.new
+    s.create_collection('/calendars/admin/cal/', type: :calendar)
+    s.put_item('/calendars/admin/cal/event.ics', 'data', 'text/calendar')
+    status, = call(path: Protocol::Caldav::Path.new('/calendars/admin/cal/event.ics', storage_class: s), storage: s)
+    status.should.equal 204
+    s.get_item('/calendars/admin/cal/event.ics').should.be.nil
+  end
+
+  it "deletes a collection and returns 204" do
+    s = Async::Caldav::Storage::Mock.new
+    s.create_collection('/calendars/admin/cal/', type: :calendar)
+    status, = call(path: Protocol::Caldav::Path.new('/calendars/admin/cal/', storage_class: s), storage: s)
+    status.should.equal 204
+    s.collection_exists?('/calendars/admin/cal/').should.equal false
+  end
+
+  it "returns 404 for non-existent resource" do
+    s = Async::Caldav::Storage::Mock.new
+    status, = call(path: Protocol::Caldav::Path.new('/calendars/admin/nope/', storage_class: s), storage: s)
+    status.should.equal 404
   end
 end

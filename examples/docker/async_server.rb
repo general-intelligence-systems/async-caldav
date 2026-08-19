@@ -20,8 +20,8 @@ endpoint = Async::HTTP::Endpoint.parse("http://0.0.0.0:9292")
 app = Async::Caldav::ForwardAuth.new(
   Async::Caldav::Server.new(
     Protocol::HTTP::Middleware::NotFound,
-    storage: storage
-  )
+    storage: storage,
+  ),
 )
 
 server = Async::HTTP::Server.new(app, endpoint)

@@ -1,51 +1,44 @@
 {
-  description = "Ruby gem flake";
+  description = "async-caldav";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     utils.url = "github:numtide/flake-utils";
   };
+
   outputs = { self, nixpkgs, utils }:
     utils.lib.eachDefaultSystem (system:
       let
+        name = "async-caldav";
+
         pkgs = nixpkgs.legacyPackages.${system};
-        ruby = pkgs.ruby_3_4; # Specify version
+
+        # The gems come from the store, resolved from the checked-in
+        # Gemfile.lock and gemset.nix. `.envrc` runs `bundix -l` on entry, so
+        # gemset.nix follows the lockfile without a separate step.
+        gems = pkgs.bundlerEnv {
+          name = name;
+          ruby = pkgs.ruby_3_4;
+          gemfile = ./Gemfile;
+          lockfile = ./Gemfile.lock;
+          gemset = ./gemset.nix;
+          groups = [ "default" "development" ];
+        };
       in
       {
-        packages.runtime = pkgs.buildEnv {
-          name = "caldav-runtime";
-          paths = [
-            ruby
-            pkgs.libyaml
-            pkgs.openssl
-            pkgs.cacert
-            pkgs.coreutils
-          ];
-        };
-
         devShells.default = pkgs.mkShell {
-          nativeBuildInputs = [
-            pkgs.pkg-config # native extension discovery
+          buildInputs = with pkgs; [
+            gems
+            gems.wrappedRuby
+            bundix
+            libyaml # psych
+            openssl # openssl gem
+            ripgrep # scampi finds `__END__` spec sections with `rg`
+            lefthook # `lefthook install` writes .git/hooks
+            trufflehog # what the pre-commit hook scans with
+            curl # bin/integration
           ];
-
-          buildInputs = [
-            ruby
-            pkgs.libyaml # psych gem
-            pkgs.openssl # openssl gem
-            pkgs.coreutils
-            pkgs.cacert
-            pkgs.nix-ld
-          ];
-
-          shellHook = ''
-            export GEM_HOME="$PWD/.gem"
-            export GEM_PATH="$GEM_HOME"
-            export PATH="$GEM_HOME/bin:$PATH"
-            export BUNDLE_PATH="$GEM_HOME"
-            export BUNDLE_BIN="$GEM_HOME/bin"
-          '';
         };
       }
     );
 }
-

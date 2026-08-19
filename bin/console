@@ -2,7 +2,9 @@
 # frozen_string_literal: true
 
 require "bundler/setup"
-require "async/caldav"
+# require_relative, not `require "async/caldav"`: the Gemfile no longer pulls
+# this gem in through `gemspec`, so lib/ is not on the load path.
+require_relative "../lib/async/caldav"
 require "irb"
 
 IRB.start(__FILE__)

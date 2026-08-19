@@ -1,0 +1,12 @@
+# Git hooks (managed by lefthook). Install with `nix develop --command lefthook install`.
+#
+# pre-commit: scan for secrets (trufflehog) and run the test suites (bin/test).
+# Both are wrapped in `nix develop --command` because the hook fires outside the
+# flake devshell, so trufflehog, Ruby and the ripgrep scampi shells out to would
+# not otherwise be on PATH.
+pre-commit:
+  commands:
+    secrets:
+      run: nix develop --command trufflehog git file://. --since-commit HEAD --only-verified --fail
+    tests:
+      run: nix develop --command bin/test

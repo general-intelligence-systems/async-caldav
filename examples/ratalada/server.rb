@@ -14,7 +14,9 @@ storage = Async::Caldav::Storage::Filesystem.new(ENV.fetch("CALDAV_DATA_DIR", "/
 
 # Pre-create parent collections
 %w[/calendars/ /calendars/admin/ /addressbooks/ /addressbooks/admin/].each do |path|
-  storage.create_collection(path) unless storage.get_collection(path)
+  unless storage.get_collection(path)
+    storage.create_collection(path)
+  end
 end
 
 caldav = Async::Caldav::Server.new(storage: storage)

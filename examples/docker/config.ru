@@ -19,7 +19,9 @@ storage = Async::Caldav::Storage::Filesystem.new("/data")
 
 # Pre-create parent collections
 %w[/calendars/ /calendars/admin/ /addressbooks/ /addressbooks/admin/].each do |p|
-  storage.create_collection(p) unless storage.get_collection(p)
+  unless storage.get_collection(p)
+    storage.create_collection(p)
+  end
 end
 
 use ForwardAuthMiddleware
