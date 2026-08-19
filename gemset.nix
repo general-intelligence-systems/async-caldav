@@ -82,6 +82,14 @@
   };
   protocol-caldav = {
     dependencies = ["builder" "rexml"];
+    groups = ["default"];
+    platforms = [];
+    source = {
+      remotes = ["https://rubygems.org"];
+      sha256 = "0s9ra8nm76ibpqa8a0ryqbd5fmgcqwbzvxgi8gbqmdbd2vj66sjd";
+      type = "gem";
+    };
+    version = "1.1.0";
   };
   racc = {
     groups = ["default" "development"];

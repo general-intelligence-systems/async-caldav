@@ -3,6 +3,11 @@
 source "https://rubygems.org"
 
 gem "async-caldav", "~> 1.2"
+
+# Pinned explicitly, not left to async-caldav's own constraint: the released
+# async-caldav still asks for `protocol-caldav ~> 1.0`, and 1.0.3 carries the
+# scampi 0.x `test do` blocks that blow up as `Kernel#test` on load.
+gem "protocol-caldav", "~> 1.1"
 gem "ratalada", "~> 1.0"
 gem "falcon", "~> 0.55.5"
 

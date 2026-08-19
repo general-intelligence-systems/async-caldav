@@ -67,10 +67,9 @@ GEM
     localhost (1.8.0)
       bake
     openssl (4.0.2)
-    protocol-caldav (1.0.3)
+    protocol-caldav (1.1.0)
       builder
       rexml
-      scampi (~> 0.1.7)
     protocol-hpack (1.5.1)
     protocol-http (0.71.0)
     protocol-http1 (0.40.2)
@@ -100,6 +99,7 @@ DEPENDENCIES
   async-caldav (~> 1.2)
   async-service (~> 0.24.1)
   falcon (~> 0.55.5)
+  protocol-caldav (~> 1.1)
   ratalada (~> 1.0)
 
 BUNDLED WITH

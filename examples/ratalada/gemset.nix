@@ -256,15 +256,15 @@
     version = "4.0.2";
   };
   protocol-caldav = {
-    dependencies = ["builder" "rexml" "scampi"];
+    dependencies = ["builder" "rexml"];
     groups = ["default"];
     platforms = [];
     source = {
       remotes = ["https://rubygems.org"];
-      sha256 = "06c4816vspffbaw9cb52mzcpxbi8gfjj8zcy6c7kvk7yglbxrc98";
+      sha256 = "0s9ra8nm76ibpqa8a0ryqbd5fmgcqwbzvxgi8gbqmdbd2vj66sjd";
       type = "gem";
     };
-    version = "1.0.3";
+    version = "1.1.0";
   };
   protocol-hpack = {
     groups = ["default"];

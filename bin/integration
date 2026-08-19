@@ -371,6 +371,7 @@ expected_body=$(cat <<'XML' | strip_ctag
         <c:calendar-description>Test description</c:calendar-description>
         <cs:getctag>CTAG</cs:getctag>
         <c:supported-calendar-component-set><c:comp name="VEVENT"/><c:comp name="VTODO"/><c:comp name="VJOURNAL"/></c:supported-calendar-component-set>
+        <d:current-user-privilege-set><d:privilege><d:read/></d:privilege><d:privilege><d:write/></d:privilege><d:privilege><d:all/></d:privilege></d:current-user-privilege-set>
       </d:prop>
       <d:status>HTTP/1.1 200 OK</d:status>
     </d:propstat>
@@ -1073,6 +1074,7 @@ expected_body=$(cat <<'XML' | strip_ctag
         <d:resourcetype><d:collection/><cr:addressbook/></d:resourcetype>
         <d:displayname>IntTest Addr</d:displayname>
         <cs:getctag>CTAG</cs:getctag>
+        <d:current-user-privilege-set><d:privilege><d:read/></d:privilege><d:privilege><d:write/></d:privilege><d:privilege><d:all/></d:privilege></d:current-user-privilege-set>
       </d:prop>
       <d:status>HTTP/1.1 200 OK</d:status>
     </d:propstat>
