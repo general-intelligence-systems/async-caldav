@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-EXAMPLE_DIR="$ROOT_DIR/example"
+EXAMPLE_DIR="$ROOT_DIR/examples/ratalada"
 
 # --- Unit tests ---
 echo "=== Unit tests ==="
@@ -30,12 +30,15 @@ trap cleanup EXIT
 # The example depends on the published async-caldav, like any other user of
 # the gem. -I puts this working tree ahead of it so the integration suite
 # exercises the code you are editing, not the release.
-# Its own BUNDLE_PATH: the example installs the released async-caldav, and a
-# shared gem dir would overwrite the path-source stub this repo's own bundle
-# resolves `gemspec` to.
+# Its own BUNDLE_PATH and BUNDLE_BIN: the example installs the released
+# async-caldav, and a shared gem dir would overwrite the path-source stub this
+# repo's own bundle resolves `gemspec` to -- and shared binstubs would get
+# rewritten to point BUNDLE_GEMFILE at the example.
 (
   cd "$EXAMPLE_DIR"
+  export BUNDLE_GEMFILE="$EXAMPLE_DIR/Gemfile"
   export BUNDLE_PATH="$EXAMPLE_DIR/.gem"
+  export BUNDLE_BIN="$EXAMPLE_DIR/.gem/bin"
   bundle install --quiet
   CALDAV_DATA_DIR="$DATA_DIR" HOST=127.0.0.1 PORT=9292 \
     RUBYOPT="-I$ROOT_DIR/lib" exec bundle exec ruby server.rb

@@ -31,14 +31,21 @@ That is the whole server -- `ruby server.rb` listens on `http://127.0.0.1:9292`
 and the falcon backend). It is still a plain Rack app, so a `config.ru` under
 any other server works just as well.
 
-`example/` is that server as a runnable file, with a flake around it:
+`examples/ratalada/` is that server as a runnable file, with a flake around it:
 
 ```
-cd example
+cd examples/ratalada
 nix run          # or: bundle install && bundle exec ruby server.rb
 ```
 
 Data lands in `$CALDAV_DATA_DIR` (default `./data`).
+
+`examples/docker/` is the same server the older way -- a `config.ru` served by
+`falcon host`, wrapped in a Dockerfile and a Compose file:
+
+```
+cd examples/docker && docker compose up -d
+```
 
 ## Client
 
@@ -124,14 +131,14 @@ bundle install
 bundle exec scampi
 ```
 
-Integration tests -- starts `example/server.rb`, hits it with curl, shuts it down:
+Integration tests -- starts `examples/ratalada/server.rb`, hits it with curl, shuts it down:
 ```
 bin/test
 ```
 
 Or against a server you started yourself:
 ```
-cd example && bundle exec ruby server.rb
+cd examples/ratalada && bundle exec ruby server.rb
 bin/integration
 ```
 
